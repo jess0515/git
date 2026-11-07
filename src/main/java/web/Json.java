@@ -1,17 +1,26 @@
 package web;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpExchange;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 final class Json {
 
     static final ObjectMapper MAPPER = new ObjectMapper();
 
     private Json() {
+    }
+
+    public static Map<String, Object> readMap(HttpExchange exchange) throws IOException {
+        try (InputStream in = exchange.getRequestBody()) {
+            return MAPPER.readValue(in, new TypeReference<Map<String, Object>>() {});
+        }
     }
 
     static void send(HttpExchange exchange, int status, String body) throws IOException {

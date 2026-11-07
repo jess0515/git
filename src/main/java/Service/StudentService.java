@@ -6,6 +6,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Map;
+
 import Exception.StudentExistException;
 
 public class StudentService {
@@ -13,7 +15,6 @@ public class StudentService {
     private static final Logger log = LoggerFactory.getLogger(StudentService.class);
 
     private StudentDao studentDao = new StudentDao();
-
 
     public boolean addStudent(Student student) {
 
@@ -71,6 +72,19 @@ public class StudentService {
         }
         log.warn("修改学生失败：影响行数为 0 id={}", student.getId());
         return null;
+    }
+
+    public boolean patchStudent(int id, Map<String, Object> patchMap) {
+        Student stu = this.queryStudentById(id);
+        if (stu == null) {
+            return false;
+        }
+        if (patchMap.containsKey("phone")) {
+            String phone = String.valueOf(patchMap.get("phone"));
+            stu.setPhone(phone);
+        }
+        Student res = this.updateStudent(stu);
+        return res != null;
     }
 
     public boolean deleteStudent(int id) {

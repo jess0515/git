@@ -13,6 +13,7 @@ import java.io.InputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 
 public class StudentHandler implements HttpHandler {
 
@@ -33,6 +34,7 @@ public class StudentHandler implements HttpHandler {
                 case "GET" -> handleGet(exchange);
                 case "POST" -> handlePost(exchange);
                 case "PUT" -> handlePut(exchange);
+                case "PATCH"->handlePatch(exchange);
                 case "DELETE" -> handleDelete(exchange);
                 default -> Json.send(exchange, 405, "{\"error\":\"不支持的方法：" + method + "\"}");
             }
@@ -62,6 +64,7 @@ public class StudentHandler implements HttpHandler {
         List<Student> students = studentService.queryAllStudentByClassId(classid);
         Json.sendObject(exchange, 200, students);
     }
+
     private void handlePost(HttpExchange exchange) throws IOException {
         String body = readBody(exchange);
         Student stu = Json.MAPPER.readValue(body, Student.class);
@@ -93,6 +96,31 @@ public class StudentHandler implements HttpHandler {
         }
         Json.sendObject(exchange, 200, updated);
     }
+
+    private void handlePatch(HttpExchange exchange) throws IOException {
+        String path = exchange.getRequestURI().getPath();
+        String[] parts = path.split("/");
+        if (parts.length != 4) {
+            Json.send(exchange, 400, "{\"error\":\"路径格式错误，示例 /api/students/1\"}");
+            return;
+        }
+        int id;
+        try {
+            id = Integer.parseInt(parts[3]);
+        } catch (NumberFormatException e) {
+            Json.send(exchange, 400, "{\"error\":\"id不是数字\"}");
+            return;
+        }
+        Map<String, Object> patchMap = Json.readMap(exchange);
+        boolean ok = studentService.patchStudent(id, patchMap);
+        if (!ok) {
+            Json.send(exchange, 404, "{\"error\":\"学生不存在\"}");
+            return;
+        }
+        Json.send(exchange, 200, "{\"msg\":\"局部更新成功\"}");
+    }
+
+
     private void handleDelete(HttpExchange exchange) throws IOException {
         int id = pathId(exchange);
         if (id <= 0) {
