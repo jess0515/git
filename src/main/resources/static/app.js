@@ -6,9 +6,15 @@ const emptyTip = document.getElementById('empty');
 const addForm = document.getElementById('addForm');
 const formTitle = document.getElementById('formTitle');
 const submitBtn = document.getElementById('submitBtn');
-
+const nameSearch = document.getElementById('nameSearch');
+const patchPhoneModal = document.querySelector('#patchPhoneModal');
+const patchPhoneInput = document.querySelector('#patchPhoneInput');
+const confirmPatchBtn = document.querySelector('#confirmPatch');
+const cancelPatchBtn = document.querySelector('#cancelPatch');
 let currentList = [];
 let editingId = null;
+
+
 
 async function loadClasses() {
   const res = await fetch('/api/classes');
@@ -42,16 +48,54 @@ async function loadStudents() {
     return;
   }
   const list = await res.json();
+  const tip = document.getElementById('totalTip');
+  tip.textContent = `当前班级共有${list.length}人`;
+  currentList = list;
   renderRows(list);
   statusText.textContent = '共 ' + list.length + ' 条';
 }
 
+cancelPatchBtn.addEventListener('click', () => {
+  patchPhoneModal.style.display = 'none';
+});
+confirmPatchBtn.addEventListener('click', async () => {
+  const phone = patchPhoneInput.value.trim();
+  const res = await fetch(`/api/students/${currentPatchId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ phone })
+  });
+  const data = await res.json();
+  if (res.ok) {
+    alert('手机号修改成功');
+    patchPhoneModal.style.display = 'none';
+    // 这里调用你自己的刷新列表函数，比如 loadList()
+    loadList();
+  } else {
+    alert(data.error);
+  }
+});
+
+nameSearch.addEventListener('input', (e) => {
+  const keyword = nameSearch.value.trim().toLowerCase();
+  const filteredlist = currentList.filter(student => {
+    return student.name.toLowerCase().includes(keyword);})
+  renderRows(filteredlist);
+  statusText.textContent = `筛选后${filteredlist.length}条`;
+})
+
 function renderRows(list) {
-  currentList = list;
   tbody.innerHTML = '';
   if (list.length === 0) {
+    if (currentList.length === 0) {
     emptyTip.hidden = false;
     emptyTip.textContent = '这个班还没有学生';
+  }else
+    {
+      emptyTip.hidden = true;
+    }
     return;
   }
   emptyTip.hidden = true;
@@ -67,9 +111,20 @@ function renderRows(list) {
       <td>
         <button type="button" class="update" data-id="${s.id}">编辑</button>
         <button type="button" class="delete" data-id="${s.id}">删除</button>
+        <button type="button" class="patchphone" data-id="${s.id}" data-phone="${s.phone ?? ''}">修改手机号</button>
       </td>
     `;
     tbody.appendChild(tr);
+  }
+  const delBtns = document.querySelectorAll('.delete');
+  const shouldDisable = currentList.length===0;
+  for(const btn of delBtns) {
+      btn.disabled = shouldDisable;
+      if(shouldDisable) {
+        btn.classList.add('disabled-btn');
+      }else{
+        btn.classList.remove('disabled-btn');
+      }
   }
 }
 
@@ -145,6 +200,46 @@ async function createStudent(payload) {
     statusText.textContent = '网络请求失败';
   }
 }
+async function onAddSubmit(et){
+  e.preventDefault();
+  const classidrow = classSelect.value;
+  if (!classidrow) {
+    statusText.textContent = "请先在上方选择班级！";
+    return;
+  }
+  const classId = Number(classidrow);
+
+  const form = e.target;
+  const fd = new FormData(form);
+  const nameRaw = fd.get('name');
+  if (!nameRaw) {
+    statusText.textContent = "姓名不能为空";
+    return;
+  }
+  const name = (nameRaw ).trim();
+  const gender = fd.get('gender');
+  const age = Number(fd.get('age'));
+
+  // 提交前GET当前班级学生，前端查重
+  const resCheck = await fetch(`/api/students?classid=${encodeURIComponent(classId)}`);
+  if (!resCheck.ok) {
+    statusText.textContent = "校验学生列表失败";
+    return;
+  }
+  const listCheck = await resCheck.json();
+  const isDuplicate = listCheck.some((stu) => stu.name === name);
+  if (isDuplicate) {
+    statusText.textContent = "名字重复，添加失败（前端校验）";
+    return;
+  }
+  // =============================================================
+
+  const payload = { name, gender, age, classId };
+  await createStudent(payload);
+}
+addForm?.addEventListener('submit', onAddSubmit);
+
+
 
 async function updateStudent(id, payload) {
   try {
@@ -197,15 +292,28 @@ reloadBtn.addEventListener('click', () => {
 });
 addForm.addEventListener('submit', submitForm);
 
+// 只留这一段，别的tbody click全部删掉
 tbody.addEventListener('click', async (e) => {
   const target = e.target;
+  if (!target.matches('button')) return;
+  const id = target.dataset.id;
+
   if (target.classList.contains('update')) {
-    startEdit(target.dataset.id);
+    startEdit(id);
     return;
   }
-  if (!target.classList.contains('delete')) return;
-  if (!confirm('确定删除？')) return;
-  await removeStudent(target.dataset.id);
+  if (target.classList.contains('delete')) {
+    if (!confirm('确定删除？')) return;
+    await removeStudent(id);
+    return;
+  }
+  if (target.classList.contains('patchphone')) {
+    currentPatchId = Number(id);
+    const oldphone= target.dataset.phone ?? '';
+    patchPhoneInput.value = oldphone;
+    patchPhoneModal.style.display = 'block';
+    return;
+  }
 });
 
 loadClasses();

@@ -101,6 +101,11 @@ input:focus {
   filter: brightness(1.08);
 }
 
+.delete:disabled, .disabled-btn {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .status {
   margin-left: auto;
   color: var(--muted);

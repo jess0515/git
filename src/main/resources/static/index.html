@@ -13,16 +13,28 @@
       <p class="hint">数据来自 ApiServer · Service 层与命令行版共用</p>
     </header>
 
+    <div id="patchPhoneModal" style="display:none;position:fixed;top:30%;left:50%;transform:translate(-50%,-50%);background:#fff;padding:24px;border:1px solid #999;border-radius:8px;z-index:999;">
+      <h4>修改手机号</h4>
+      <input type="text" id="patchPhoneInput" placeholder="请输入手机号">
+      <div style="margin-top:12px;">
+        <button id="confirmPatch">确认修改</button>
+        <button id="cancelPatch" style="margin-left:8px;">取消</button>
+      </div>
+    </div>
+
     <section class="toolbar">
       <label for="classid">班级</label>
       <select id="classid">
         <option value="">请选择班级</option>
       </select>
+      <label for="nameSearch">姓名搜索</label>
+      <input type="text" id="nameSearch" placeholder="输入姓名过滤">
       <button id="reload" type="button" class="btn btn-ghost">刷新</button>
       <span id="status" class="status"></span>
     </section>
 
     <section class="table-wrap">
+      <p id = "totalTip"></p>
       <table>
         <thead>
           <tr>
